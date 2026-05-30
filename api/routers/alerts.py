@@ -1,12 +1,13 @@
 """Alerts router — list, mark read, resolve, test notifications."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from api.auth import get_current_user
 from api.dependencies import get_db
 from config import settings
+from core.security import get_client_ip, log_audit
 from models.user import User
 from services import alert_service
 from services.notification_service import _send_telegram_message
@@ -90,12 +91,22 @@ def mark_read(
 @router.patch("/{alert_id}/resolve", response_model=AlertResponse)
 def resolve_alert(
     alert_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
     alert = alert_service.resolve_alert(db, alert_id)
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
+
+    log_audit(
+        "resolve_alert",
+        user_id=_user.id,
+        user_email=_user.email,
+        details={"alert_id": alert_id},
+        ip_address=get_client_ip(request),
+    )
+
     return _serialize(alert)
 
 

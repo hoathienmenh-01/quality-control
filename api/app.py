@@ -1,6 +1,7 @@
 import os
+import time
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -27,6 +28,37 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── Security Headers Middleware ───────────────────────────────────────────────
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response: Response = await call_next(request)
+    # Chặn clickjacking
+    response.headers["X-Frame-Options"] = "DENY"
+    # Chặn MIME sniffing
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    # XSS protection
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    # Strict Transport Security (HTTPS)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # Referrer Policy
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Permissions Policy
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
+
+
+# ── Request Logging Middleware ────────────────────────────────────────────────
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    duration = time.time() - start
+    # Chỉ log các request chậm (>2s) hoặc lỗi
+    if duration > 2 or response.status_code >= 400:
+        print(f"[{request.method}] {request.url.path} -> {response.status_code} ({duration:.2f}s)")
+    return response
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 from api.routers import (

@@ -2,12 +2,19 @@
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from api.auth import get_current_user
 from api.dependencies import get_db
+from core.security import (
+    get_client_ip,
+    log_audit,
+    sanitize_string,
+    validate_serial_number,
+    validate_station_id,
+)
 from models.user import User
 from services import inspection_service
 
@@ -28,6 +35,38 @@ class InspectionCreate(BaseModel):
     antenna_result: str | None = None
     image_path: str | None = None
     inference_time_ms: float | None = None
+
+    @field_validator("product_serial")
+    @classmethod
+    def validate_serial(cls, v):
+        v = sanitize_string(v, max_length=100)
+        if not validate_serial_number(v):
+            raise ValueError("Serial chỉ cho phép chữ, số, dash và underscore")
+        return v
+
+    @field_validator("product_type")
+    @classmethod
+    def validate_product_type(cls, v):
+        v = sanitize_string(v, max_length=100)
+        if not v:
+            raise ValueError("product_type không được để trống")
+        return v
+
+    @field_validator("station_id")
+    @classmethod
+    def validate_station(cls, v):
+        v = sanitize_string(v, max_length=50)
+        if not validate_station_id(v):
+            raise ValueError("station_id chỉ cho phép chữ, số, dash và underscore")
+        return v
+
+    @field_validator("overall_result")
+    @classmethod
+    def validate_result(cls, v):
+        allowed = {"pending", "pass", "fail"}
+        if v not in allowed:
+            raise ValueError(f"overall_result phải là một trong: {allowed}")
+        return v
 
 
 class InspectionResponse(BaseModel):
@@ -62,10 +101,25 @@ class InspectionStats(BaseModel):
 @router.post("/", response_model=InspectionResponse, status_code=201)
 def create_inspection(
     payload: InspectionCreate,
+    request: Request,
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
     insp = inspection_service.create_inspection(db, payload.model_dump())
+
+    log_audit(
+        "create_inspection",
+        user_id=_user.id,
+        user_email=_user.email,
+        details={
+            "inspection_id": insp.id,
+            "product_serial": insp.product_serial,
+            "station_id": insp.station_id,
+            "result": insp.overall_result,
+        },
+        ip_address=get_client_ip(request),
+    )
+
     return _serialize(insp)
 
 
