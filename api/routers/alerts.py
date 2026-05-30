@@ -1,4 +1,4 @@
-"""Alerts router — list, mark read, resolve."""
+"""Alerts router — list, mark read, resolve, test notifications."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -6,8 +6,10 @@ from sqlalchemy.orm import Session
 
 from api.auth import get_current_user
 from api.dependencies import get_db
+from config import settings
 from models.user import User
 from services import alert_service
+from services.notification_service import _send_telegram_message
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
@@ -95,3 +97,26 @@ def resolve_alert(
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
     return _serialize(alert)
+
+
+@router.post("/test-telegram")
+def test_telegram(
+    _user: User = Depends(get_current_user),
+):
+    """Gửi tin nhắn test qua Telegram để kiểm tra cấu hình."""
+    token = settings.TELEGRAM_BOT_TOKEN
+    chat_id = settings.TELEGRAM_CHAT_ID
+
+    if not token or not chat_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Telegram chưa được cấu hình. Set TELEGRAM_BOT_TOKEN và TELEGRAM_CHAT_ID trong .env",
+        )
+
+    success = _send_telegram_message(
+        token, chat_id,
+        "✅ <b>Test alert từ QC System</b>\n\nKết nối Telegram thành công!",
+    )
+    if success:
+        return {"status": "ok", "message": "Telegram test sent successfully"}
+    raise HTTPException(status_code=500, detail="Failed to send Telegram message")

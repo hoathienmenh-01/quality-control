@@ -7,14 +7,23 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from models.inspection import Inspection
+from services.notification_service import check_and_alert
 
 
 def create_inspection(db: Session, data: dict) -> Inspection:
-    """Create a new inspection record."""
+    """Create a new inspection record.
+    
+    Automatically triggers alert if inspection result is 'fail'.
+    """
     inspection = Inspection(**data)
     db.add(inspection)
     db.commit()
     db.refresh(inspection)
+
+    # Tự động kiểm tra và tạo alert nếu sản phẩm lỗi
+    if inspection.overall_result == "fail":
+        check_and_alert(db, inspection)
+
     return inspection
 
 
