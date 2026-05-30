@@ -1,17 +1,15 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
-const MOCK_DATA = [
-  { name: 'Thiếu linh kiện', count: 12 },
-  { name: 'Lỗi hàn', count: 8 },
-  { name: 'QR không đọc được', count: 6 },
-  { name: 'Sai SN', count: 5 },
-  { name: 'Anten lỗi', count: 4 },
-  { name: 'Vết xước', count: 3 },
-]
-
 const COLORS = ['#f43f5e', '#fb7185', '#fda4af', '#fecdd3', '#ffe4e6', '#fff1f2']
 
-export default function TopDefectsChart({ data = MOCK_DATA, height = 300 }) {
+export default function TopDefectsChart({ data, height = 300 }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[200px] text-gray-400">
+        <p className="text-sm">Chưa có dữ liệu lỗi phổ biến</p>
+      </div>
+    )
+  }
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>

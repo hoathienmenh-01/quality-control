@@ -1,13 +1,13 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
-const MOCK_DATA = [
-  { station: 'Station A', pass: 120, fail: 8 },
-  { station: 'Station B', pass: 95, fail: 12 },
-  { station: 'Station C', pass: 110, fail: 5 },
-  { station: 'Station D', pass: 85, fail: 15 },
-]
-
-export default function StationChart({ data = MOCK_DATA, height = 300 }) {
+export default function StationChart({ data, height = 300 }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[200px] text-gray-400">
+        <p className="text-sm">Chưa có dữ liệu trạm</p>
+      </div>
+    )
+  }
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>

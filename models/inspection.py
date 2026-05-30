@@ -1,4 +1,4 @@
-from sqlalchemy import Float, Integer, String, Text
+from sqlalchemy import Float, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from models.base import Base
@@ -8,6 +8,9 @@ class Inspection(Base):
     """Record of a single product inspection."""
 
     __tablename__ = "inspections"
+    __table_args__ = (
+        Index("ix_inspections_created_at", "created_at"),
+    )
 
     product_serial: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     product_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)

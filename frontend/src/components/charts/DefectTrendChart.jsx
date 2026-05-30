@@ -1,16 +1,13 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
-const MOCK_DATA = Array.from({ length: 30 }, (_, i) => {
-  const d = new Date()
-  d.setDate(d.getDate() - (29 - i))
-  return {
-    date: d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
-    defects: Math.floor(Math.random() * 15) + 2,
-    inspections: Math.floor(Math.random() * 50) + 30,
+export default function DefectTrendChart({ data, height = 300 }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[200px] text-gray-400">
+        <p className="text-sm">Chưa có dữ liệu xu hướng lỗi</p>
+      </div>
+    )
   }
-})
-
-export default function DefectTrendChart({ data = MOCK_DATA, height = 300 }) {
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>

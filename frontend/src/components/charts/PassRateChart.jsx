@@ -2,7 +2,15 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 
 const COLORS = ['#10b981', '#f43f5e']
 
-export default function PassRateChart({ passCount = 450, failCount = 30 }) {
+export default function PassRateChart({ passCount, failCount }) {
+  if (passCount === undefined || failCount === undefined) {
+    return (
+      <div className="flex items-center justify-center h-[250px] text-gray-400">
+        <p className="text-sm">Chưa có dữ liệu tỷ lệ đạt</p>
+      </div>
+    )
+  }
+
   const data = [
     { name: 'PASS', value: passCount },
     { name: 'FAIL', value: failCount },

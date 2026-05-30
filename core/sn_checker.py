@@ -49,7 +49,9 @@ class SNChecker:
             }
 
         # Clean up SN text
-        sn_text = self.clean_sn(sn_text)
+        # Preserve spaces if SN format expects them (e.g., "SN 123 456")
+        preserve_spaces = expected_format and " " in expected_format if expected_format else False
+        sn_text = self.clean_sn(sn_text, preserve_spaces=preserve_spaces)
 
         # Check confidence
         if confidence < 0.4:
@@ -175,12 +177,23 @@ class SNChecker:
         x, y, w, h = region["x"], region["y"], region["w"], region["h"]
         return image[y : y + h, x : x + w]
 
-    def clean_sn(self, text: str) -> str:
-        """Làm sạch text SN (loại bỏ ký tự lạ)"""
+    def clean_sn(self, text: str, preserve_spaces: bool = False) -> str:
+        """Làm sạch text SN (loại bỏ ký tự lạ)
+        
+        Args:
+            text: SN text từ OCR
+            preserve_spaces: Giữ lại space nếu SN format cho phép (VD: "SN 123 456")
+        """
         if not text:
             return text
-        # Loại bỏ khoảng trắng và ký tự đặc biệt
-        cleaned = re.sub(r'[^A-Za-z0-9\-_]', '', text)
+        if preserve_spaces:
+            # Giữ lại space cho SN format "SN 123 456"
+            cleaned = re.sub(r'[^A-Za-z0-9\-_ ]', '', text)
+            # Chuẩn hóa nhiều space thành 1
+            cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        else:
+            # Mặc định: loại bỏ tất cả ký tự không phải alphanumeric
+            cleaned = re.sub(r'[^A-Za-z0-9\-_]', '', text)
         return cleaned.upper()
 
     def validate_format(self, sn_text: str, pattern: str) -> bool:

@@ -1,16 +1,22 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
-const MOCK_DATA = Array.from({ length: 14 }, (_, i) => {
-  const d = new Date()
-  d.setDate(d.getDate() - (13 - i))
-  return {
-    date: d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
-    volume: Math.floor(Math.random() * 80) + 40,
-    passRate: Math.floor(Math.random() * 15) + 85,
-  }
-})
+function EmptyPlaceholder({ message = 'Chưa có dữ liệu' }) {
+  return (
+    <div className="flex items-center justify-center h-full min-h-[200px] text-gray-400">
+      <div className="text-center">
+        <svg className="mx-auto h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+        </svg>
+        <p className="text-sm">{message}</p>
+      </div>
+    </div>
+  )
+}
 
-export default function DailyStatsChart({ data = MOCK_DATA, height = 300 }) {
+export default function DailyStatsChart({ data, height = 300 }) {
+  if (!data || data.length === 0) {
+    return <EmptyPlaceholder />
+  }
   return (
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>

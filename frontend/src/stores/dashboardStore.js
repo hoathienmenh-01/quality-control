@@ -2,22 +2,28 @@ import { create } from 'zustand'
 import { dashboardAPI } from '../services/api'
 
 export const useDashboardStore = create((set) => ({
-  stats: {
-    total_inspected: 1250,
-    total_passed: 1180,
-    total_failed: 70,
-    pass_rate: 94.4,
-  },
+  stats: null,  // null = chưa load, khác mock data
   isLoading: false,
   error: null,
+  isMock: false,  // true nếu đang dùng dữ liệu mẫu
 
   fetchStats: async () => {
     set({ isLoading: true, error: null })
     try {
       const response = await dashboardAPI.stats()
-      set({ stats: response.data, isLoading: false })
-    } catch {
-      set({ isLoading: false })
+      set({ stats: response.data, isLoading: false, isMock: false })
+    } catch (err) {
+      set({ 
+        isLoading: false, 
+        error: err.message || 'Không thể tải dữ liệu',
+        isMock: true,  // Đánh dấu đang dùng mock
+        stats: {
+          total_inspected: 0,
+          total_passed: 0,
+          total_failed: 0,
+          pass_rate: 0,
+        },
+      })
     }
   },
 }))
