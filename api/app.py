@@ -19,7 +19,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Routers ───────────────────────────────────────────────────────────────────
+from api.routers import (
+    alerts_router,
+    auth_router,
+    camera_router,
+    dashboard_router,
+    defects_router,
+    export_router,
+    inspections_router,
+    templates_router,
+)
 
+app.include_router(auth_router)
+app.include_router(inspections_router)
+app.include_router(templates_router)
+app.include_router(export_router)
+app.include_router(defects_router)
+app.include_router(alerts_router)
+app.include_router(dashboard_router)
+app.include_router(camera_router)
+
+
+# ── Health endpoints ──────────────────────────────────────────────────────────
 @app.get("/")
 async def root():
     return {

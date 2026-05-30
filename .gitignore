@@ -54,3 +54,4 @@ captures/*.png
 # Alembic
 alembic/versions/*.py
 !alembic/versions/.gitkeep
+.venv/
