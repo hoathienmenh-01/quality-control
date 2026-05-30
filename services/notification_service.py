@@ -3,10 +3,12 @@
 Tính năng:
 - Tạo Alert record khi inspection FAIL
 - Gửi thông báo Telegram real-time
+- Broadcast WebSocket real-time đến frontend
 - Theo dõi lỗi liên tiếp per station (consecutive fail threshold)
 - Theo dõi tỷ lệ lỗi (fail rate threshold)
 """
 
+import asyncio
 import json
 import logging
 from datetime import datetime, timedelta
@@ -106,6 +108,10 @@ def check_and_alert(db: Session, inspection: Inspection) -> Alert | None:
     # Gửi Telegram (best-effort, không block nếu lỗi)
     if created_alerts:
         _send_telegram_alerts(created_alerts)
+
+    # Broadcast WebSocket real-time đến frontend
+    if created_alerts:
+        _broadcast_ws_alerts(created_alerts)
 
     # Trả về alert đầu tiên (defect_detected)
     return created_alerts[0] if created_alerts else None
@@ -215,3 +221,29 @@ def _send_telegram_message(token: str, chat_id: str, text: str) -> bool:
     except Exception as e:
         logger.error(f"Failed to send Telegram alert: {e}")
         return False
+
+
+def _broadcast_ws_alerts(alerts: list[Alert]) -> None:
+    """Broadcast alerts qua WebSocket đến tất cả connected clients (best-effort)."""
+    try:
+        from api.websocket_manager import alert_manager
+
+        for alert in alerts:
+            ws_message = {
+                "type": "alert",
+                "alert_type": alert.alert_type,
+                "severity": alert.severity,
+                "title": alert.title,
+                "message": alert.message,
+                "station_id": alert.station_id,
+                "created_at": alert.created_at.isoformat() if alert.created_at else None,
+            }
+            # Fire-and-forget: chạy trong background, không block
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(alert_manager.broadcast(ws_message))
+            except RuntimeError:
+                # Không có event loop đang chạy → chạy sync trong thread
+                asyncio.run(alert_manager.broadcast(ws_message))
+    except Exception as e:
+        logger.error(f"Failed to broadcast WebSocket alert: {e}")

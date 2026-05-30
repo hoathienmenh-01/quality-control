@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import DashboardPage from './pages/DashboardPage'
@@ -8,10 +9,35 @@ import ReportsPage from './pages/ReportsPage'
 import AlertsPage from './pages/AlertsPage'
 import CameraPage from './pages/CameraPage'
 import SettingsPage from './pages/SettingsPage'
+import { AlertToastContainer } from './components/AlertToast'
+import { useWebSocketAlerts } from './hooks/useWebSocketAlerts'
+import { useAlertStore } from './stores/alertStore'
 
 function App() {
+  const addRealtimeAlert = useAlertStore((s) => s.addRealtimeAlert)
+  const setWsConnected = useAlertStore((s) => s.setWsConnected)
+
+  const handleAlert = useCallback(
+    (data) => {
+      addRealtimeAlert(data)
+    },
+    [addRealtimeAlert]
+  )
+
+  const { isConnected, toasts, dismissToast } = useWebSocketAlerts({
+    onAlert: handleAlert,
+  })
+
+  // Sync connection status to store
+  if (useAlertStore.getState().wsConnected !== isConnected) {
+    setWsConnected(isConnected)
+  }
+
   return (
     <Router>
+      {/* Real-time alert toasts */}
+      <AlertToastContainer toasts={toasts} onDismiss={dismissToast} />
+
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<DashboardPage />} />

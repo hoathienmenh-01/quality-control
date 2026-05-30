@@ -1,8 +1,10 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+
+from api.websocket_manager import alert_manager
 
 load_dotenv()
 
@@ -61,3 +63,34 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+# ── WebSocket — Real-time alerts ─────────────────────────────────────────────
+@app.websocket("/ws/alerts")
+async def websocket_alerts(ws: WebSocket):
+    """WebSocket endpoint cho real-time alert notifications.
+    
+    Client kết nối: ws://host:port/ws/alerts
+    Nhận JSON messages khi có sản phẩm lỗi.
+    """
+    await alert_manager.connect(ws)
+    try:
+        while True:
+            # Giữ connection alive, chờ data từ client (ping/pong)
+            data = await ws.receive_text()
+            # Client có thể gửi "ping", server trả "pong"
+            if data == "ping":
+                await ws.send_text('{"type":"pong"}')
+    except WebSocketDisconnect:
+        await alert_manager.disconnect(ws)
+    except Exception:
+        await alert_manager.disconnect(ws)
+
+
+@app.get("/ws/status")
+async def websocket_status():
+    """Kiểm tra trạng thái WebSocket connections."""
+    return {
+        "active_connections": alert_manager.connection_count,
+        "status": "ok",
+    }

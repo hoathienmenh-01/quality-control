@@ -1,61 +1,16 @@
 import { create } from 'zustand'
 import { alertsAPI } from '../services/api'
 
-const MOCK_ALERTS = [
-  {
-    id: 1,
-    severity: 'critical',
-    message: 'Station B: Tỷ lệ lỗi vượt ngưỡng 15%',
-    station: 'Station B',
-    created_at: new Date(Date.now() - 300000).toISOString(),
-    read: false,
-    resolved: false,
-  },
-  {
-    id: 2,
-    severity: 'warning',
-    message: 'Camera mất kết nối tạm thời',
-    station: 'Station A',
-    created_at: new Date(Date.now() - 1800000).toISOString(),
-    read: false,
-    resolved: false,
-  },
-  {
-    id: 3,
-    severity: 'info',
-    message: 'Batch #1234 hoàn thành kiểm tra',
-    station: 'Station C',
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    read: true,
-    resolved: true,
-  },
-  {
-    id: 4,
-    severity: 'warning',
-    message: 'QR reader chậm bất thường tại Station D',
-    station: 'Station D',
-    created_at: new Date(Date.now() - 7200000).toISOString(),
-    read: true,
-    resolved: false,
-  },
-  {
-    id: 5,
-    severity: 'info',
-    message: 'Hệ thống backup hoàn tất',
-    station: null,
-    created_at: new Date(Date.now() - 14400000).toISOString(),
-    read: true,
-    resolved: true,
-  },
-]
-
 export const useAlertStore = create((set, get) => ({
-  alerts: MOCK_ALERTS,
+  alerts: [],
+  realtimeAlerts: [],  // Alerts từ WebSocket real-time
   isLoading: false,
   error: null,
   filterSeverity: '',
+  wsConnected: false,
 
   setFilterSeverity: (s) => set({ filterSeverity: s }),
+  setWsConnected: (connected) => set({ wsConnected: connected }),
 
   fetchAlerts: async (params) => {
     set({ isLoading: true, error: null })
@@ -65,6 +20,25 @@ export const useAlertStore = create((set, get) => ({
     } catch {
       set({ isLoading: false })
     }
+  },
+
+  /**
+   * Thêm alert real-time từ WebSocket vào store
+   */
+  addRealtimeAlert: (wsAlert) => {
+    const alert = {
+      id: `ws-${Date.now()}`,
+      severity: wsAlert.severity,
+      title: wsAlert.title,
+      message: wsAlert.message,
+      station: wsAlert.station_id,
+      alert_type: wsAlert.alert_type,
+      created_at: wsAlert.created_at || new Date().toISOString(),
+      read: false,
+      resolved: false,
+      isRealtime: true,
+    }
+    set({ realtimeAlerts: [alert, ...get().realtimeAlerts].slice(0, 100) })
   },
 
   markRead: async (id) => {
@@ -82,8 +56,9 @@ export const useAlertStore = create((set, get) => ({
   },
 
   getFilteredAlerts: () => {
-    const { alerts, filterSeverity } = get()
-    if (!filterSeverity) return alerts
-    return alerts.filter((a) => a.severity === filterSeverity)
+    const { alerts, realtimeAlerts, filterSeverity } = get()
+    const all = [...realtimeAlerts, ...alerts]
+    if (!filterSeverity) return all
+    return all.filter((a) => a.severity === filterSeverity)
   },
 }))
