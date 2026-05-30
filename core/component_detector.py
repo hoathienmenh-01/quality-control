@@ -257,13 +257,9 @@ class ComponentDetector:
                         best_match = comp
                         best_idx = i
 
-            if best_match is None and detected:
-                # Fallback: match by count
-                for i, comp in enumerate(detected):
-                    if i not in used_indices:
-                        best_match = comp
-                        best_idx = i
-                        break
+            if best_match is None:
+                # No fallback — mark as not found
+                pass
 
             if best_match is not None:
                 used_indices.add(best_idx)

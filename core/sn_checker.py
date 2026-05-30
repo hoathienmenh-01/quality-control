@@ -22,7 +22,10 @@ class SNChecker:
         if self.reader is None:
             if not HAS_EASYOCR:
                 raise ImportError("easyocr not installed. Run: pip install easyocr")
-            self.reader = easyocr.Reader(self.languages)
+            try:
+                self.reader = easyocr.Reader(self.languages)
+            except Exception as e:
+                raise RuntimeError(f"Failed to initialize EasyOCR: {e}")
         return self.reader
 
     def check(self, image: np.ndarray, sn_region: dict = None,

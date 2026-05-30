@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Auth
-    SECRET_KEY: str = "your-secret-key-change-in-production"
+    SECRET_KEY: str = ""  # MUST be set via .env or environment variable
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     ALGORITHM: str = "HS256"
 
@@ -44,3 +44,11 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Validate critical settings
+if not settings.SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY is not set. "
+        "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(64))' "
+        "and add it to .env"
+    )

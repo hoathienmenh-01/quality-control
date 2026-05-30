@@ -83,7 +83,10 @@ class QRChecker:
         if not HAS_PYZBAR:
             raise ImportError("pyzbar not installed. Run: pip install pyzbar")
 
-        decoded = pyzbar_decode(image, symbols=[ZBarSymbol.QRCODE])
+        try:
+            decoded = pyzbar_decode(image, symbols=[ZBarSymbol.QRCODE])
+        except Exception:
+            return []
         contents = []
         for obj in decoded:
             try:

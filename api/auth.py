@@ -13,7 +13,12 @@ from sqlalchemy.orm import Session
 from api.dependencies import get_db
 from models.user import User
 
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY environment variable is not set. "
+        "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(64))'"
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24h
 

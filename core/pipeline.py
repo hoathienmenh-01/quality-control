@@ -42,8 +42,14 @@ class InspectionPipeline:
 
         # 2. Kiểm tra QR
         qr_region = (template or {}).get("qr_region")
+        qr_image = processed
+        if qr_region:
+            try:
+                qr_image = self.image_processor.crop_roi(processed, **qr_region)
+            except (TypeError, KeyError, ValueError):
+                pass  # fallback to full image
         qr_result = self.qr_checker.check(
-            self.image_processor.crop_roi(processed, **qr_region) if qr_region else processed,
+            qr_image,
             expected_format=(template or {}).get("qr_format"),
             batch_number=batch_number,
         )
