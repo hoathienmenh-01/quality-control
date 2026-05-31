@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from api.auth import (
+    LoginRequest,
     Token,
     UserCreate,
     UserResponse,
@@ -70,7 +71,7 @@ def register(
 
 
 @router.post("/login", response_model=Token)
-def login(payload: UserCreate, request: Request, db: Session = Depends(get_db)):
+def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)):
     """Authenticate and return a JWT token. Có rate limiting chống brute force."""
     client_ip = get_client_ip(request)
     rate_key = f"login:{client_ip}"

@@ -33,6 +33,12 @@ class TokenData(BaseModel):
     role: str | None = None
 
 
+class LoginRequest(BaseModel):
+    """Schema cho login — chỉ cần email + password."""
+    email: str
+    password: str
+
+
 class UserCreate(BaseModel):
     email: str
     name: str

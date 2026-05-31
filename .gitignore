@@ -55,3 +55,6 @@ captures/*.png
 alembic/versions/*.py
 !alembic/versions/.gitkeep
 .venv/
+
+# Export files
+exports/

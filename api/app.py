@@ -1,8 +1,12 @@
 import os
 import time
 
+from pathlib import Path
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 
 from api.websocket_manager import alert_manager
@@ -34,17 +38,11 @@ app.add_middleware(
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response: Response = await call_next(request)
-    # Chặn clickjacking
     response.headers["X-Frame-Options"] = "DENY"
-    # Chặn MIME sniffing
     response.headers["X-Content-Type-Options"] = "nosniff"
-    # XSS protection
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    # Strict Transport Security (HTTPS)
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    # Referrer Policy
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    # Permissions Policy
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     return response
 
@@ -55,12 +53,12 @@ async def log_requests(request: Request, call_next):
     start = time.time()
     response = await call_next(request)
     duration = time.time() - start
-    # Chỉ log các request chậm (>2s) hoặc lỗi
     if duration > 2 or response.status_code >= 400:
         print(f"[{request.method}] {request.url.path} -> {response.status_code} ({duration:.2f}s)")
     return response
 
-# ── Routers ───────────────────────────────────────────────────────────────────
+
+# ── API Routers (registered FIRST — highest priority) ─────────────────────────
 from api.routers import (
     alerts_router,
     auth_router,
@@ -82,35 +80,19 @@ app.include_router(dashboard_router)
 app.include_router(camera_router)
 
 
-# ── Health endpoints ──────────────────────────────────────────────────────────
-@app.get("/")
-async def root():
-    return {
-        "name": "Quality Control System",
-        "version": "1.0.0",
-        "status": "running",
-    }
-
-
+# ── Health & WebSocket (explicit paths — before catch-all) ───────────────────
 @app.get("/health")
 async def health():
     return {"status": "ok"}
 
 
-# ── WebSocket — Real-time alerts ─────────────────────────────────────────────
 @app.websocket("/ws/alerts")
 async def websocket_alerts(ws: WebSocket):
-    """WebSocket endpoint cho real-time alert notifications.
-    
-    Client kết nối: ws://host:port/ws/alerts
-    Nhận JSON messages khi có sản phẩm lỗi.
-    """
+    """WebSocket endpoint cho real-time alert notifications."""
     await alert_manager.connect(ws)
     try:
         while True:
-            # Giữ connection alive, chờ data từ client (ping/pong)
             data = await ws.receive_text()
-            # Client có thể gửi "ping", server trả "pong"
             if data == "ping":
                 await ws.send_text('{"type":"pong"}')
     except WebSocketDisconnect:
@@ -121,8 +103,34 @@ async def websocket_alerts(ws: WebSocket):
 
 @app.get("/ws/status")
 async def websocket_status():
-    """Kiểm tra trạng thái WebSocket connections."""
     return {
         "active_connections": alert_manager.connection_count,
         "status": "ok",
     }
+
+
+# ── Frontend Static Files (LAST — catch-all after all API routes) ────────────
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+if FRONTEND_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR / "assets")), name="static-assets")
+
+    @app.get("/")
+    async def root():
+        return FileResponse(str(FRONTEND_DIR / "index.html"))
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Catch-all: serve frontend files or fallback to index.html for SPA routing."""
+        file_path = FRONTEND_DIR / full_path
+        if full_path and file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(FRONTEND_DIR / "index.html"))
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "name": "Quality Control System",
+            "version": "1.0.0",
+            "status": "running",
+        }
