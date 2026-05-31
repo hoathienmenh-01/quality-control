@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from api.auth import get_current_user
 from api.dependencies import get_db
+from config import settings
 from models.user import User
 
 router = APIRouter(prefix="/api/camera", tags=["camera"])
@@ -15,11 +16,8 @@ router = APIRouter(prefix="/api/camera", tags=["camera"])
 # In-memory camera state (production would use Redis or DB)
 _camera_state: dict = {
     "connected": False,
-    "camera_id": int(os.getenv("CAMERA_ID", "0")),
-    "resolution": (
-        int(os.getenv("CAMERA_RESOLUTION_WIDTH", "1920")),
-        int(os.getenv("CAMERA_RESOLUTION_HEIGHT", "1080")),
-    ),
+    "camera_id": settings.CAMERA_ID,
+    "resolution": (settings.CAMERA_WIDTH, settings.CAMERA_HEIGHT),
     "last_capture": None,
 }
 
@@ -64,7 +62,7 @@ def capture_image(_user: User = Depends(get_current_user)):
     # Stub: in production, call core/camera.py to grab a frame
     from datetime import datetime
 
-    captures_dir = os.getenv("CAPTURE_DIR", "./captures")
+    captures_dir = settings.CAPTURES_DIR
     os.makedirs(captures_dir, exist_ok=True)
     filename = f"capture_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
     filepath = os.path.join(captures_dir, filename)

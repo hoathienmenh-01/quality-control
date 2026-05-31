@@ -9,9 +9,10 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from config import settings
 from models.inspection import Inspection
 
-EXPORT_DIR = os.getenv("EXPORT_DIR", "./exports")
+EXPORT_DIR = settings.EXPORT_DIR
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
 
